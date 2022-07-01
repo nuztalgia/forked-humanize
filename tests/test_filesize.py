@@ -38,4 +38,4 @@ def test_naturalsize(test_args: list[int] | list[int | bool], expected: str) -> 
 
     args_with_negative = test_args
     args_with_negative[0] *= -1
-    assert humanize.naturalsize(*args_with_negative) == "-" + expected
+    assert humanize.naturalsize(*args_with_negative) == f"-{expected}"

@@ -137,16 +137,9 @@ def intcomma(value: NumberOrString, ndigits: int | None = None) -> str:
     except (TypeError, ValueError):
         return str(value)
 
-    if ndigits is not None:
-        orig = "{0:.{1}f}".format(value, ndigits)
-    else:
-        orig = str(value)
-
+    orig = str(value) if ndigits is None else "{0:.{1}f}".format(value, ndigits)
     new = re.sub(r"^(-?\d+)(\d{3})", rf"\g<1>{sep}\g<2>", orig)
-    if orig == new:
-        return new
-    else:
-        return intcomma(new)
+    return new if orig == new else intcomma(new)
 
 
 powers = [10**x for x in (3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 100)]
@@ -213,14 +206,11 @@ def intword(value: NumberOrString, format: str = "%.1f") -> str:
             if float(format % chopped) == float(10**3):
                 chopped = value / float(powers[ordinal])
                 singular, plural = human_powers[ordinal]
-                return (
-                    " ".join([format, _ngettext(singular, plural, math.ceil(chopped))])
-                ) % chopped
             else:
                 singular, plural = human_powers[ordinal - 1]
-                return (
-                    " ".join([format, _ngettext(singular, plural, math.ceil(chopped))])
-                ) % chopped
+            return (
+                " ".join([format, _ngettext(singular, plural, math.ceil(chopped))])
+            ) % chopped
     return str(value)
 
 
@@ -375,19 +365,14 @@ def scientific(value: NumberOrString, precision: int = 2) -> str:
         value = float(value)
     except (ValueError, TypeError):
         return str(value)
-    fmt = "{:.%se}" % str(int(precision))
+    fmt = "{:.%se}" % str(precision)
     n = fmt.format(value)
     part1, part2 = n.split("e")
     # Remove redundant leading '+' or '0's (preserving the last '0' for 10⁰).
     part2 = re.sub(r"^\+?(\-?)0*(.+)$", r"\1\2", part2)
 
-    new_part2 = []
-    for char in part2:
-        new_part2.append(exponents[char])
-
-    final_str = part1 + " x 10" + "".join(new_part2)
-
-    return final_str
+    new_part2 = [exponents[char] for char in part2]
+    return f"{part1} x 10" + "".join(new_part2)
 
 
 def clamp(
@@ -508,9 +493,5 @@ def metric(value: float, unit: str = "", precision: int = 3) -> str:
     else:
         ordinal = ""
     value_ = format(value, ".%if" % (precision - (exponent % 3) - 1))
-    if not (unit or ordinal) or unit in ("°", "′", "″"):
-        space = ""
-    else:
-        space = " "
-
+    space = "" if not (unit or ordinal) or unit in {"°", "′", "″"} else " "
     return f"{value_}{space}{ordinal}{unit}"

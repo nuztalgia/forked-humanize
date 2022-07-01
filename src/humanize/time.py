@@ -171,37 +171,35 @@ def naturaldelta(
             return _ngettext("%d minute", "%d minutes", minutes) % minutes
         elif 3600 <= seconds < 3600 * 2:
             return _("an hour")
-        elif 3600 < seconds:
+        elif seconds > 3600:
             hours = seconds // 3600
             return _ngettext("%d hour", "%d hours", hours) % hours
     elif years == 0:
         if days == 1:
             return _("a day")
-        if not use_months:
+        if use_months and not num_months or not use_months:
             return _ngettext("%d day", "%d days", days) % days
+        elif num_months == 1:
+            return _("a month")
         else:
-            if not num_months:
-                return _ngettext("%d day", "%d days", days) % days
-            elif num_months == 1:
-                return _("a month")
-            else:
-                return _ngettext("%d month", "%d months", num_months) % num_months
+            return _ngettext("%d month", "%d months", num_months) % num_months
     elif years == 1:
-        if not num_months and not days:
+        if (
+            (num_months or days)
+            and num_months
+            and use_months
+            and num_months == 1
+        ):
+            return _("1 year, 1 month")
+        elif (num_months or days) and num_months and use_months:
+            return (
+                _ngettext("1 year, %d month", "1 year, %d months", num_months)
+                % num_months
+            )
+        elif not num_months and not days:
             return _("a year")
-        elif not num_months:
-            return _ngettext("1 year, %d day", "1 year, %d days", days) % days
-        elif use_months:
-            if num_months == 1:
-                return _("1 year, 1 month")
-            else:
-                return (
-                    _ngettext("1 year, %d month", "1 year, %d months", num_months)
-                    % num_months
-                )
         else:
             return _ngettext("1 year, %d day", "1 year, %d days", days) % days
-
     return _ngettext("%d year", "%d years", years).replace("%d", "%s") % intcomma(years)
 
 
@@ -258,11 +256,8 @@ def naturalday(value: dt.date | dt.datetime, format: str = "%b %d") -> str:
     """
     try:
         value = dt.date(value.year, value.month, value.day)
-    except AttributeError:
+    except (AttributeError, OverflowError, ValueError):
         # Passed value wasn't date-ish
-        return str(value)
-    except (OverflowError, ValueError):
-        # Date arguments out of range
         return str(value)
     delta = value - dt.date.today()
     if delta.days == 0:
@@ -278,11 +273,8 @@ def naturaldate(value: dt.date | dt.datetime) -> str:
     """Like `naturalday`, but append a year for dates more than ~five months away."""
     try:
         value = dt.date(value.year, value.month, value.day)
-    except AttributeError:
+    except (AttributeError, OverflowError, ValueError):
         # Passed value wasn't date-ish
-        return str(value)
-    except (OverflowError, ValueError):
-        # Date arguments out of range
         return str(value)
     delta = _abs_timedelta(value - dt.date.today())
     if delta.days >= 5 * 365 / 12:
